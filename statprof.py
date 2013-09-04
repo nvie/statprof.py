@@ -104,6 +104,7 @@ from __future__ import division
 
 import os
 import signal
+import sys
 
 from collections import defaultdict
 from contextlib import contextmanager
@@ -329,7 +330,6 @@ def display(fp=None, format=0):
     '''Print statistics, either to stdout or the given file object.'''
 
     if fp is None:
-        import sys
         fp = sys.stdout
     if state.sample_count == 0:
         print >> fp, ('No samples recorded.')
@@ -429,3 +429,27 @@ def display_by_method(fp):
                                                                 call.self_secs_in_proc,
                                                                 call.lineno,
                                                                 source))
+
+def main():
+    '''Run the given script under the profiler, when invoked as a module
+    (python -m statprof ...), and display the profile report once done.
+    '''
+    if not sys.argv[1:] or sys.argv[1] in ('--help', '-h'):
+        print 'usage: python -m statprof <script> [<args>]'
+        sys.exit(2)
+
+    scriptfile = sys.argv[1]
+    if not os.path.exists(scriptfile):
+        print 'Error:', scriptfile, 'does not exist'
+        sys.exit(1)
+
+    del sys.argv[0]  # Hide 'statprof' from argument list
+
+    # Replace statprof's dir with script's dir in front of module search path
+    sys.path[0] = os.path.dirname(scriptfile)
+
+    with profile():
+        execfile(scriptfile)
+
+if __name__ == '__main__':
+    main()
